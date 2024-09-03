@@ -13,7 +13,6 @@ import org.testng.annotations.AfterTest;
 import org.testng.annotations.BeforeTest;
 import org.testng.annotations.Test;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.exc.StreamWriteException;
 import com.fasterxml.jackson.databind.DatabindException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -24,10 +23,11 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.NoSuchElementException;
 import java.util.logging.Level;
 // import io.github.bonigarcia.wdm.WebDriverManager;
 import demo.wrappers.Wrappers;
+
+import org.testng.Assert;
 
 public class TestCases {
     ChromeDriver driver;
@@ -71,7 +71,7 @@ public class TestCases {
 
     }
 
-    @Test
+     @Test
     public void testCase01() throws InterruptedException, StreamWriteException, DatabindException, IOException {
 
         driver.get("https://www.scrapethissite.com/pages/");
@@ -79,8 +79,8 @@ public class TestCases {
         wrap.topicSearch("Hockey Teams: Forms, Searching and Pagination", driver);
         List<Map<String, Object>> teamDataList = new ArrayList<>();
         // int total = 0;
-         WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(30));
-         wait.until(ExpectedConditions.presenceOfElementLocated(By.xpath("//ul[@class='pagination']/li/a")));
+        WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(30));
+        wait.until(ExpectedConditions.presenceOfElementLocated(By.xpath("//ul[@class='pagination']/li/a")));
         for (int i = 1; i < 5; i++) {
             WebElement page = driver.findElement(By.xpath("(//ul[@class='pagination']//a)[" + (i + 1) + "]"));
             page.click();
@@ -90,8 +90,8 @@ public class TestCases {
                 WebElement element = winPercentages.get(j);
                 float wins = wrap.webElementToNumber(element, driver);
                 if (wins < 0.40) {
-                    WebElement teamName = element.findElement(By.xpath("./preceding-sibling::td[5]"));
-                    WebElement year = element.findElement(By.xpath("./preceding-sibling::td[4]"));
+                    WebElement teamName = element.findElement(By.xpath("./preceding-sibling::td[@class='name']"));
+                    WebElement year = element.findElement(By.xpath("./preceding-sibling::td[@class='year']"));
                     long currentEpochTime = System.currentTimeMillis();
                     // System.out.println("Current Epoch Time in milliseconds: " +
                     // currentEpochTime);
@@ -111,48 +111,37 @@ public class TestCases {
             }
 
         }
-
         ObjectMapper mapper = new ObjectMapper();
-        Map<String, Object> inputMap = new HashMap<String, Object>();
-        inputMap.put("Hockey Teams", teamDataList);
-
-        // Converting map to a JSON payload as string
         try {
-            String employeePrettyJson = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(inputMap);
-            System.out.println(employeePrettyJson);
-        } catch (JsonProcessingException e) {
-            e.printStackTrace();
-        }
-
-        String userDir = System.getProperty("user.dir");
-
-        // Writing JSON on a file
-        try {
+            String userDir = System.getProperty("user.dir");
+            File jsonFile = new File(userDir + "\\src\\test\\resources\\hockey-team-data.json");
             mapper.writerWithDefaultPrettyPrinter()
-                    .writeValue(new File(userDir + "\\src\\test\\resources\\hockey-team-data.json"), inputMap);
-        } catch (IOException e) {
+                    .writeValue(new File(userDir + "\\src\\test\\resources\\hockey-team-data.json"), teamDataList);
+            System.out.println("JSON data written to :" + jsonFile.getAbsolutePath());
+            Assert.assertTrue(jsonFile.length() != 0);
+        } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
- @Test
-    public void testCase02() throws InterruptedException {
+    @Test
+    public void testCase02() throws InterruptedException, IOException {
         driver.get("https://www.scrapethissite.com/pages/");
         Wrappers wrap = new Wrappers();
         wrap.topicSearch("Oscar Winning Films", driver);
         List<Map<String, Object>> teamDataList = new ArrayList<>();
+
         List<WebElement> years = driver.findElements(By.xpath("(//a[contains(@class,'year-link')])"));
         for (int i = 0; i < years.size(); i++) {
             years.get(i).click();
             Thread.sleep(3000);
-            // System.out.println("Year Looking into is :" + years.get(i).getText());
+            // WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(30));
+            // wait.until(ExpectedConditions.presenceOfElementLocated(By.xpath("(//a[contains(@class,'year-link')])")));
+
             List<WebElement> filmsList = driver.findElements(By.xpath("(//tr[contains(@class,'film')])"));
             for (int j = 0; j < 5; j++) {
                 long currentEpochTime = System.currentTimeMillis();
-                System.out.println("Current Epoch Time in milliseconds: " + currentEpochTime);
                 String year = years.get(i).getText();
-
-              
 
                 WebElement titleElement = filmsList.get(j).findElement(By.xpath("./td[@class='film-title']"));
                 String title = titleElement.getText();
@@ -161,21 +150,20 @@ public class TestCases {
                 String nominations = nominationsElement.getText();
                 WebElement awardsElement = filmsList.get(j).findElement(By.xpath("./td[@class='film-awards']"));
                 String awards = awardsElement.getText();
-                
-                 // System.out.println("Year :" + year);
-                 // System.out.println("Title :" + title);
-                 // System.out.println("Nomination :" + nominations);
-               // System.out.println("Awards :" + awards);
-              
+
+                // System.out.println("Year :" + year);
+                // System.out.println("Title :" + title);
+                // System.out.println("Nomination :" + nominations);
+                // System.out.println("Awards :" + awards);
+
                 boolean winner = false;
                 try {
                     WebElement bestPicture = filmsList.get(j)
                             .findElement(By.xpath("./td[@class='film-best-picture']//i"));
-                    // String b = bestPicture.getText();
-                   // System.out.println("isWinner : True");
+                    // System.out.println("isWinner : True");
                     winner = true;
                 } catch (Exception e) {
-                   // System.out.println("isWinner : False");
+                    // System.out.println("isWinner : False");
                 }
                 Map<String, Object> teamData = new HashMap<>();
                 teamData.put("Epoch Time", currentEpochTime);
@@ -190,26 +178,15 @@ public class TestCases {
 
         }
         ObjectMapper mapper = new ObjectMapper();
-        Map<String, Object> inputMap = new HashMap<String, Object>();
-        inputMap.put("Oscar Winning Films", teamDataList);
-
-        // Converting map to a JSON payload as string
         try {
-            String employeePrettyJson = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(inputMap);
-            System.out.println(employeePrettyJson);
-        } catch (JsonProcessingException e) {
-            e.printStackTrace();
-        }
-
-        String userDir = System.getProperty("user.dir");
-
-        // Writing JSON on a file
-        try {
+            String userDir = System.getProperty("user.dir");
+            File jsonFile = new File(userDir + "\\src\\test\\resources\\oscar-winner-data.json");
             mapper.writerWithDefaultPrettyPrinter()
-                    .writeValue(new File(userDir + "\\src\\test\\resources\\oscar-winner-data.json"), inputMap);
-        } catch (IOException e) {
+                    .writeValue(new File(userDir + "\\src\\test\\resources\\oscar-winner-data.json"), teamDataList);
+            System.out.println("JSON data written to :" + jsonFile.getAbsolutePath());
+            Assert.assertTrue(jsonFile.length() != 0);
+        } catch (Exception e) {
             e.printStackTrace();
         }
-
     }
 }
